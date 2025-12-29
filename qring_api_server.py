@@ -1029,6 +1029,26 @@ def upload_qring_data():
 
 # ==================== 前端 API 接口 ====================
 
+@app.route('/', methods=['GET'])
+def root():
+    """根路径，返回 API 信息"""
+    return jsonify({
+        "service": "Qring API Server",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/api/health",
+            "upload": "/api/qring/upload",
+            "stats": "/api/stats",
+            "heartrate": "/api/heartrate",
+            "hrv": "/api/hrv",
+            "stress": "/api/stress",
+            "blood_oxygen": "/api/blood-oxygen",
+            "activity": "/api/daily-activity",
+            "sleep": "/api/sleep",
+        }
+    })
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """健康检查"""
@@ -1639,30 +1659,6 @@ if __name__ == '__main__':
     # 加载已有数据
     load_data()
     
-    print("\n" + "="*80)
-    print("Qring 数据 API 服务器")
-    print("="*80)
-    print("\n服务器运行在: http://localhost:5002")
-    print("\n数据接收接口（iOS App 使用）:")
-    print("  - POST /api/qring/upload - 上传 Qring 数据")
-    print("    请求体: {\"type\": \"heartrate|sleep|activity|...\", \"data\": [...]}")
-    print("\n前端 API 接口:")
-    print("  - GET /api/health - 健康检查")
-    print("  - GET /api/heartrate?hours=24 - 心率数据")
-    print("  - GET /api/daily-activity?days=30 - 活动数据")
-    print("  - GET /api/daily-readiness?days=30 - 准备度数据（Qring 不支持）")
-    print("  - GET /api/sleep?days=30 - 睡眠数据")
-    print("  - GET /api/stats - 统计信息")
-    print("\n数据存储: qring_data.json")
-    print("="*80 + "\n")
-    
-    # 监听所有网络接口，允许 iOS 设备连接
-    print("\n⚠️  重要提示：")
-    print("   iOS 设备无法访问 localhost，必须使用 Mac 的 IP 地址")
-    print("   在 Mac 终端运行: ifconfig | grep 'inet ' | grep -v 127.0.0.1")
-    print("   然后在 iOS App 中使用这个 IP 地址作为服务器地址")
-    print("="*80 + "\n")
-    
     # 从环境变量读取配置，生产环境使用
     host = os.getenv('HOST', '0.0.0.0')
     port = int(os.getenv('PORT', 5002))
@@ -1673,7 +1669,32 @@ if __name__ == '__main__':
     if flask_env == 'production':
         debug = False
     
-    print(f"\n环境配置:")
+    print("\n" + "="*80)
+    print("Qring 数据 API 服务器")
+    print("="*80)
+    print(f"\n服务器运行在: http://{host}:{port}")
+    print("\n数据接收接口（iOS App 使用）:")
+    print("  - POST /api/qring/upload - 上传 Qring 数据")
+    print("    请求体: {\"type\": \"heartrate|sleep|activity|...\", \"data\": [...]}")
+    print("\n前端 API 接口:")
+    print("  - GET /api/health - 健康检查")
+    print("  - GET /api/heartrate?hours=24 - 心率数据")
+    print("  - GET /api/daily-activity?days=30 - 活动数据")
+    print("  - GET /api/daily-readiness?days=30 - 准备度数据（Qring 不支持）")
+    print("  - GET /api/sleep?days=30 - 睡眠数据")
+    print("  - GET /api/stats - 统计信息")
+    print(f"\n数据存储: {DATA_FILE}")
+    print("="*80 + "\n")
+    
+    # 开发环境才显示本地 IP 提示
+    if flask_env == 'development':
+        print("\n⚠️  重要提示：")
+        print("   iOS 设备无法访问 localhost，必须使用 Mac 的 IP 地址")
+        print("   在 Mac 终端运行: ifconfig | grep 'inet ' | grep -v 127.0.0.1")
+        print("   然后在 iOS App 中使用这个 IP 地址作为服务器地址")
+        print("="*80 + "\n")
+    
+    print(f"环境配置:")
     print(f"  FLASK_ENV: {flask_env}")
     print(f"  DEBUG: {debug}")
     print(f"  HOST: {host}")
