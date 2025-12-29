@@ -88,7 +88,8 @@ python qring_api_server.py
 .
 ├── qring_api_server.py      # 主应用文件
 ├── requirements.txt          # Python 依赖
-├── Procfile                  # Railway 部署配置
+├── railway.toml              # Railway 配置文件（推荐）
+├── Procfile                  # Railway 部署配置（备用）
 ├── Dockerfile                # Docker 部署配置
 ├── env.example.backend       # 环境变量示例
 ├── .env                      # 环境变量配置（不提交到 Git）
@@ -98,14 +99,22 @@ python qring_api_server.py
 
 ## 🚢 部署
 
-### Railway 部署
+### Railway 部署（推荐）
 
 1. 在 Railway 创建新项目
-2. 连接 GitHub 仓库
-3. 配置环境变量（参考 `env.example.backend`）
-4. Railway 会自动检测 `Procfile` 并启动服务
+2. 连接 GitHub 仓库（`oscarka/Qring-backend`）
+3. Railway 会自动检测 `railway.toml` 配置文件
+4. 在 Railway Dashboard 配置环境变量：
+   ```
+   FLASK_ENV=production
+   FLASK_DEBUG=False
+   CORS_ORIGINS=https://your-frontend-domain.com
+   ```
+5. 配置 Volume 持久化存储（可选但推荐）
 
-详细部署指南请参考：[后端部署指南.md](./后端部署指南.md)
+**详细部署指南请参考：**
+- [Railway部署配置说明.md](./Railway部署配置说明.md)
+- [后端部署指南.md](./后端部署指南.md)
 
 ### Google Cloud Run 部署
 

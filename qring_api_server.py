@@ -72,7 +72,11 @@ data_store = {
 }
 
 # 数据文件路径
-DATA_FILE = "qring_data.json"
+# 支持 Railway Volume 持久化存储
+DATA_DIR = os.getenv('DATA_DIR', os.getenv('RAILWAY_VOLUME_MOUNT_PATH', '.'))
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR, exist_ok=True)
+DATA_FILE = os.path.join(DATA_DIR, "qring_data.json")
 
 
 def load_data():

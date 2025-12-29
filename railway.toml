@@ -1,0 +1,26 @@
+# Railway 配置文件
+# 参考文档: https://docs.railway.app/develop/variables#railwaytoml
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "python qring_api_server.py"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+# 环境变量配置（可以在 Railway Dashboard 中覆盖）
+[env]
+FLASK_ENV = "production"
+FLASK_DEBUG = "False"
+HOST = "0.0.0.0"
+# PORT 由 Railway 自动设置，不需要手动配置
+CORS_ORIGINS = "*"  # 生产环境应该设置为具体的前端域名
+
+# 健康检查配置
+[healthcheck]
+path = "/api/health"
+timeout = 10
+interval = 30
+
