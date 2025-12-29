@@ -12,7 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制应用代码
 COPY qring_api_server.py .
-COPY .env.example .env.example
+# 复制环境变量示例文件
+COPY env.example.backend ./
 
 # 创建数据目录（用于持久化数据文件）
 RUN mkdir -p /app/data
