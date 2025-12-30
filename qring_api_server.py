@@ -22,6 +22,26 @@ def get_local_time():
     """获取新加坡本地时间"""
     return datetime.now(SINGAPORE_TZ)
 
+def parse_datetime_with_tz(date_str):
+    """解析日期字符串并转换为新加坡时区"""
+    try:
+        if "T" in date_str:
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        else:
+            dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        
+        # 如果是 naive datetime，添加新加坡时区
+        if dt.tzinfo is None:
+            dt = SINGAPORE_TZ.localize(dt)
+        else:
+            # 如果有时区信息，转换为新加坡时区
+            dt = dt.astimezone(SINGAPORE_TZ)
+        
+        return dt
+    except Exception as e:
+        print(f"   ⚠️ 日期解析错误: {date_str}, 错误: {e}")
+        return get_local_time()  # 解析失败时返回当前时间
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -458,7 +478,7 @@ def upload_qring_data():
             cutoff = get_local_time() - timedelta(days=7)
             existing_data = [
                 item for item in data_store["heartrate"]
-                if datetime.fromisoformat(item["timestamp"]) > cutoff
+                if parse_datetime_with_tz(item["timestamp"]) > cutoff
             ]
             print(f"   现有数据(最近7天): {len(existing_data)} 条")
             
@@ -648,7 +668,7 @@ def upload_qring_data():
                 cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) > cutoff
+                    if parse_datetime_with_tz(item.get("startTime", get_local_time().isoformat())) > cutoff
                 ]
                 unique_data = {item.get("startTime", ""): item for item in existing_data}
                 for item in qring_data:
@@ -661,7 +681,7 @@ def upload_qring_data():
                 cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) > cutoff
+                    if parse_datetime_with_tz(item.get("startTime", get_local_time().isoformat())) > cutoff
                 ]
                 unique_data = {item.get("startTime", ""): item for item in existing_data}
                 for item in qring_data:
@@ -674,7 +694,7 @@ def upload_qring_data():
                 cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) > cutoff
+                    if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) > cutoff
                 ]
                 unique_data = {}
                 for item in existing_data:
@@ -713,7 +733,7 @@ def upload_qring_data():
                 cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) > cutoff
+                    if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) > cutoff
                 ]
                 
                 # 使用字典去重（key: (date, id) 或 (date, stressId/hrvId)）
@@ -837,7 +857,7 @@ def upload_qring_data():
                 cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) > cutoff
+                    if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) > cutoff
                 ]
                 
                 unique_data = {}
@@ -910,7 +930,7 @@ def upload_qring_data():
                 cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) > cutoff
+                    if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) > cutoff
                 ]
                 
                 # 使用字典去重，key为date，保留最新的数据
@@ -1110,8 +1130,8 @@ def get_heartrate():
     
     filtered_data = [
         item for item in data_store["heartrate"]
-        if datetime.fromisoformat(item["timestamp"]) >= cutoff_time
-        and datetime.fromisoformat(item["timestamp"]) <= now  # 过滤掉未来时间戳的数据
+        if parse_datetime_with_tz(item["timestamp"]) >= cutoff_time
+        and parse_datetime_with_tz(item["timestamp"]) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1305,8 +1325,8 @@ def get_hrv():
     
     filtered_data = [
         item for item in data_store.get("hrv", [])
-        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        and parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1351,8 +1371,8 @@ def get_stress():
     
     filtered_data = [
         item for item in data_store.get("stress", [])
-        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        and parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1397,8 +1417,8 @@ def get_blood_oxygen():
     
     filtered_data = [
         item for item in data_store.get("blood_oxygen", [])
-        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        and parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1439,7 +1459,7 @@ def get_temperature():
     
     filtered_data = [
         item for item in data_store.get("temperature", [])
-        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) >= cutoff_time
     ]
     
     filtered_data.sort(key=lambda x: x.get("date", ""))
@@ -1471,8 +1491,8 @@ def get_exercise():
     
     filtered_data = [
         item for item in data_store.get("exercise", [])
-        if datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if parse_datetime_with_tz(item.get("startTime", get_local_time().isoformat())) >= cutoff_time
+        and parse_datetime_with_tz(item.get("startTime", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1512,8 +1532,8 @@ def get_sport_plus():
     
     filtered_data = [
         item for item in data_store.get("sport_plus", [])
-        if datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if parse_datetime_with_tz(item.get("startTime", get_local_time().isoformat())) >= cutoff_time
+        and parse_datetime_with_tz(item.get("startTime", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1556,8 +1576,8 @@ def get_sedentary():
     
     filtered_data = [
         item for item in data_store.get("sedentary", [])
-        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        and parse_datetime_with_tz(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1632,7 +1652,7 @@ def get_manual_measurements():
     
     filtered_data = [
         item for item in data_store.get("manual_measurements", [])
-        if datetime.fromisoformat(item.get("received_at", item.get("timestamp", get_local_time().isoformat()))) >= cutoff_time
+        if parse_datetime_with_tz(item.get("received_at", item.get("timestamp", get_local_time().isoformat()))) >= cutoff_time
     ]
     
     # 如果指定了测量类型，进行过滤
