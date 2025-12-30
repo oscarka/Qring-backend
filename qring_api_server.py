@@ -1163,8 +1163,8 @@ def get_heartrate():
     
     # 检查返回数据的时间范围
     if filtered_data:
-        first_time = datetime.fromisoformat(filtered_data[0]["timestamp"])
-        last_time = datetime.fromisoformat(filtered_data[-1]["timestamp"])
+        first_time = parse_datetime_with_tz(filtered_data[0]["timestamp"])
+        last_time = parse_datetime_with_tz(filtered_data[-1]["timestamp"])
         print(f"   返回数据时间范围: {first_time.strftime('%Y-%m-%d %H:%M:%S')} ~ {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"   最新数据距离现在: {(now - last_time).total_seconds() / 60:.1f} 分钟")
         
