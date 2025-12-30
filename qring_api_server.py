@@ -351,10 +351,22 @@ def upload_qring_data():
         is_mobile = 'iOS' in user_agent or 'iPhone' in user_agent or 'iPad' in user_agent or client_ip.startswith('10.') or client_ip.startswith('192.168.')
         source = "📱 手机App" if is_mobile else "💻 Web前端"
         
+        print(f"\n{'='*60}")
+        print(f"📥 [上传接口] 收到请求")
+        print(f"   来源: {source}")
+        print(f"   客户端IP: {client_ip}")
+        print(f"   User-Agent: {user_agent}")
+        print(f"   请求方法: {request.method}")
+        print(f"   请求路径: {request.path}")
+        print(f"   请求时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
+        print(f"{'='*60}")
+        
         data = request.json
         
         if not data:
             print(f"\n❌ {source} 上传失败: 无数据 (IP: {client_ip})")
+            print(f"   请求头: {dict(request.headers)}")
+            print(f"   请求体: {request.get_data(as_text=True)[:200]}")
             return jsonify({"success": False, "error": "No data provided"}), 400
         
         data_type = data.get("type")
