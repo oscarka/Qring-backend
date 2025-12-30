@@ -185,6 +185,8 @@ def convert_qring_heartrate_to_api(qring_data):
             # 过滤未来时间的数据（超过当前时间5分钟以上的数据）
             if dt and dt > now + timedelta(minutes=5):
                 future_count += 1
+                if future_count <= 3:  # 只打印前3条未来时间数据的详情
+                    print(f"   ⏰ [convert_qring_heartrate_to_api] 跳过未来时间数据: date={date_str}, dt={dt.strftime('%Y-%m-%d %H:%M:%S')}, 距离现在={(dt - now).total_seconds() / 60:.1f}分钟")
                 continue  # 跳过未来时间的数据
             
             if dt:
@@ -207,8 +209,10 @@ def convert_qring_heartrate_to_api(qring_data):
             else:
                 non_zero_count += 1
             
+            # 添加 hrId 到结果中（用于去重）
             result.append({
                 "timestamp": timestamp,
+                "hrId": item.get("hrId", 0),
                 "bpm": int(heartrate_value) if heartrate_value else 0,
                 "hrId": item.get("hrId", 0)
             })
@@ -425,8 +429,17 @@ def upload_qring_data():
                     print(f"   📋 [后端接收检查] 26号12-14点数据: 0 条（未找到）")
             
             # 转换并存储（转换函数内部已过滤未来时间数据）
+            print(f"   🔄 开始转换数据...")
             converted_data = convert_qring_heartrate_to_api(qring_data)
-            print(f"   转换后数据条数: {len(converted_data)}")
+            print(f"   ✅ 转换后数据条数: {len(converted_data)}")
+            if converted_data:
+                print(f"   📋 转换后数据示例（前5条）:")
+                for i, item in enumerate(converted_data[:5]):
+                    print(f"      [{i}] timestamp={item.get('timestamp', 'N/A')}, bpm={item.get('bpm', 'N/A')}, hrId={item.get('hrId', 'N/A')}")
+                # 统计转换后的数据
+                zero_count = len([x for x in converted_data if x.get('bpm', 0) == 0])
+                non_zero_count = len([x for x in converted_data if x.get('bpm', 0) > 0])
+                print(f"   📊 转换后数据统计: 非0值={non_zero_count}条, 0值={zero_count}条")
             
             # 再次过滤未来时间数据（双重保险）
             now = get_local_time()
@@ -1151,9 +1164,21 @@ def get_heartrate():
         last_time = datetime.fromisoformat(filtered_data[-1]["timestamp"])
         print(f"   返回数据时间范围: {first_time.strftime('%Y-%m-%d %H:%M:%S')} ~ {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"   最新数据距离现在: {(now - last_time).total_seconds() / 60:.1f} 分钟")
+        
+        # 打印返回数据示例
+        print(f"   📋 返回数据示例（前5条）:")
+        for i, item in enumerate(filtered_data[:5]):
+            print(f"      [{i}] timestamp={item.get('timestamp', 'N/A')}, bpm={item.get('bpm', 'N/A')}, hrId={item.get('hrId', 'N/A')}")
+        print(f"   📋 返回数据示例（后5条）:")
+        for i, item in enumerate(filtered_data[-5:]):
+            idx = len(filtered_data) - 5 + i
+            print(f"      [{idx}] timestamp={item.get('timestamp', 'N/A')}, bpm={item.get('bpm', 'N/A')}, hrId={item.get('hrId', 'N/A')}")
+    else:
+        print(f"   ⚠️ 警告: 没有数据返回给前端！")
     
     valid_count = len([x for x in filtered_data if x.get("bpm", 0) > 0])
     print(f"   有效数据(bpm>0): {valid_count} 条")
+    print(f"   📤 准备返回给前端: {len(filtered_data)} 条数据")
     print(f"{'='*60}\n")
     
     return jsonify({
