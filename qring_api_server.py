@@ -450,7 +450,7 @@ def upload_qring_data():
             future_filtered = 0
             for item in converted_data:
                 try:
-                    item_time = datetime.fromisoformat(item.get("timestamp", ""))
+                    item_time = parse_datetime_with_tz(item.get("timestamp", ""))
                     # 过滤掉超过当前时间5分钟以上的数据
                     if item_time > now + timedelta(minutes=5):
                         future_filtered += 1
@@ -471,7 +471,7 @@ def upload_qring_data():
                 valid_timestamps = [ts for ts in timestamps if ts]
                 if valid_timestamps:
                     try:
-                        times = [datetime.fromisoformat(ts) for ts in valid_timestamps]
+                        times = [parse_datetime_with_tz(ts) for ts in valid_timestamps]
                         min_time = min(times)
                         max_time = max(times)
                         now = get_local_time()
@@ -481,7 +481,7 @@ def upload_qring_data():
                         # 检查有效数据（bpm>0）
                         valid_data = [item for item in converted_data if item.get("bpm", 0) > 0]
                         if valid_data:
-                            valid_times = [datetime.fromisoformat(item.get("timestamp", "")) for item in valid_data if item.get("timestamp")]
+                            valid_times = [parse_datetime_with_tz(item.get("timestamp", "")) for item in valid_data if item.get("timestamp")]
                             if valid_times:
                                 latest_valid = max(valid_times)
                                 print(f"   最新有效数据(bpm>0): {latest_valid.strftime('%Y-%m-%d %H:%M:%S')}, 距离现在: {(now - latest_valid).total_seconds() / 60:.1f} 分钟")
@@ -545,7 +545,7 @@ def upload_qring_data():
             # 检查最终数据的最新时间戳
             if data_store["heartrate"]:
                 final_timestamps = [item.get("timestamp", "") for item in data_store["heartrate"]]
-                valid_final = [datetime.fromisoformat(ts) for ts in final_timestamps if ts]
+                valid_final = [parse_datetime_with_tz(ts) for ts in final_timestamps if ts]
                 if valid_final:
                     latest_final = max(valid_final)
                     now = get_local_time()
@@ -554,7 +554,7 @@ def upload_qring_data():
                     # 检查最新有效数据
                     final_valid = [item for item in data_store["heartrate"] if item.get("bpm", 0) > 0]
                     if final_valid:
-                        valid_times = [datetime.fromisoformat(item.get("timestamp", "")) for item in final_valid if item.get("timestamp")]
+                        valid_times = [parse_datetime_with_tz(item.get("timestamp", "")) for item in final_valid if item.get("timestamp")]
                         if valid_times:
                             latest_valid_final = max(valid_times)
                             print(f"   最终最新有效数据(bpm>0): {latest_valid_final.strftime('%Y-%m-%d %H:%M:%S')}, 距离现在: {(now - latest_valid_final).total_seconds() / 60:.1f} 分钟")
