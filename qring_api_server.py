@@ -168,19 +168,11 @@ def convert_qring_heartrate_to_api(qring_data):
     
     for item in qring_data:
         if isinstance(item, dict):
-            # 处理日期格式
+            # 处理日期格式 - 使用 parse_datetime_with_tz 确保返回 aware datetime
             date_str = item.get("date", "")
             dt = None
             if date_str:
-                try:
-                    # 尝试解析 ISO 格式或自定义格式
-                    if "T" in date_str:
-                        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                    else:
-                        dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-                except Exception as e:
-                    print(f"   ⚠️ 日期解析错误: {date_str}, 错误: {e}")
-                    dt = None
+                dt = parse_datetime_with_tz(date_str)
             
             # 过滤未来时间的数据（超过当前时间5分钟以上的数据）
             if dt and dt > now + timedelta(minutes=5):
