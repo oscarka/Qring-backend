@@ -13,6 +13,14 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, date
 import threading
 import time
+from pytz import timezone
+
+# 设置时区（新加坡时间 UTC+8）
+SINGAPORE_TZ = timezone('Asia/Singapore')
+
+def get_local_time():
+    """获取新加坡本地时间"""
+    return datetime.now(SINGAPORE_TZ)
 
 load_dotenv()
 
@@ -136,7 +144,7 @@ def convert_qring_heartrate_to_api(qring_data):
     zero_count = 0
     non_zero_count = 0
     future_count = 0  # 未来时间数据计数
-    now = datetime.now()
+    now = get_local_time()
     
     for item in qring_data:
         if isinstance(item, dict):
@@ -162,7 +170,7 @@ def convert_qring_heartrate_to_api(qring_data):
             if dt:
                 timestamp = dt.isoformat()
             else:
-                timestamp = datetime.now().isoformat()
+                timestamp = get_local_time().isoformat()
             
             # 获取心率值，支持多种可能的字段名
             heartrate_value = item.get("heartrate") or item.get("heartRate") or item.get("bpm") or item.get("hr") or 0
@@ -334,7 +342,7 @@ def upload_qring_data():
         print(f"   客户端IP: {client_ip}")
         print(f"   数据类型: {data_type}")
         print(f"   数据条数: {len(qring_data)}")
-        print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
         print(f"{'='*60}")
         
         if not data_type:
@@ -345,7 +353,7 @@ def upload_qring_data():
             print(f"\n{'='*60}")
             print(f"📥 收到心率数据上传请求")
             print(f"   原始数据条数: {len(qring_data)}")
-            print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
             
             # 打印原始数据示例（用于调试）
             if qring_data and len(qring_data) > 0:
@@ -401,7 +409,7 @@ def upload_qring_data():
             print(f"   转换后数据条数: {len(converted_data)}")
             
             # 再次过滤未来时间数据（双重保险）
-            now = datetime.now()
+            now = get_local_time()
             filtered_data = []
             future_filtered = 0
             for item in converted_data:
@@ -430,7 +438,7 @@ def upload_qring_data():
                         times = [datetime.fromisoformat(ts) for ts in valid_timestamps]
                         min_time = min(times)
                         max_time = max(times)
-                        now = datetime.now()
+                        now = get_local_time()
                         print(f"   新数据时间范围: {min_time.strftime('%Y-%m-%d %H:%M:%S')} ~ {max_time.strftime('%Y-%m-%d %H:%M:%S')}")
                         print(f"   最新数据距离现在: {(now - max_time).total_seconds() / 60:.1f} 分钟")
                         
@@ -447,7 +455,7 @@ def upload_qring_data():
             
             # 去重：基于 timestamp 和 hrId 的唯一性（而不是 bpm，因为同一时间点可能有不同的hrId）
             # 先保留最近的数据（例如最近7天）
-            cutoff = datetime.now() - timedelta(days=7)
+            cutoff = get_local_time() - timedelta(days=7)
             existing_data = [
                 item for item in data_store["heartrate"]
                 if datetime.fromisoformat(item["timestamp"]) > cutoff
@@ -493,7 +501,7 @@ def upload_qring_data():
                         duplicate_count += 1
             
             data_store["heartrate"] = list(unique_data.values())
-            data_store["last_update"]["heartrate"] = datetime.now().isoformat()
+            data_store["last_update"]["heartrate"] = get_local_time().isoformat()
             
             print(f"   新增: {new_count} 条, 更新(0→非0): {updated_count} 条, 重复: {duplicate_count} 条")
             print(f"   去重后总数: {len(data_store['heartrate'])} 条")
@@ -504,7 +512,7 @@ def upload_qring_data():
                 valid_final = [datetime.fromisoformat(ts) for ts in final_timestamps if ts]
                 if valid_final:
                     latest_final = max(valid_final)
-                    now = datetime.now()
+                    now = get_local_time()
                     print(f"   最终数据最新时间戳: {latest_final.strftime('%Y-%m-%d %H:%M:%S')}, 距离现在: {(now - latest_final).total_seconds() / 60:.1f} 分钟")
                     
                     # 检查最新有效数据
@@ -521,7 +529,7 @@ def upload_qring_data():
             print(f"\n{'='*60}")
             print(f"📥 收到睡眠数据上传请求")
             print(f"   原始数据条数: {len(qring_data)}")
-            print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
             
             converted_data = convert_qring_sleep_to_api(qring_data)
             print(f"   转换后数据条数: {len(converted_data)}")
@@ -541,7 +549,7 @@ def upload_qring_data():
                 existing_days[item["day"]] = item
             new_count = len(converted_data) - (existing_count - len(existing_days))
             data_store["sleep"] = list(existing_days.values())
-            data_store["last_update"]["sleep"] = datetime.now().isoformat()
+            data_store["last_update"]["sleep"] = get_local_time().isoformat()
             print(f"   现有记录数: {existing_count} 条")
             print(f"   新增/更新: {new_count} 条")
             print(f"   更新后总数: {len(data_store['sleep'])} 条")
@@ -551,7 +559,7 @@ def upload_qring_data():
             print(f"\n{'='*60}")
             print(f"📥 收到活动数据上传请求")
             print(f"   原始数据条数: {len(qring_data)}")
-            print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
             
             converted_data = convert_qring_activity_to_api(qring_data)
             print(f"   转换后数据条数: {len(converted_data)}")
@@ -573,7 +581,7 @@ def upload_qring_data():
                 existing_days[item["day"]] = item
             new_count = len(converted_data) - (existing_count - len(existing_days))
             data_store["activity"] = list(existing_days.values())
-            data_store["last_update"]["activity"] = datetime.now().isoformat()
+            data_store["last_update"]["activity"] = get_local_time().isoformat()
             print(f"   现有记录数: {existing_count} 条")
             print(f"   新增/更新: {new_count} 条")
             print(f"   更新后总数: {len(data_store['activity'])} 条")
@@ -590,17 +598,17 @@ def upload_qring_data():
                 if not isinstance(item, dict):
                     continue
                 # 添加接收时间戳
-                item["received_at"] = datetime.now().isoformat()
+                item["received_at"] = get_local_time().isoformat()
             
             data_store["manual_measurements"].extend(qring_data)
             
             # 保留最近的数据（例如最近7天）
-            cutoff = datetime.now() - timedelta(days=7)
+            cutoff = get_local_time() - timedelta(days=7)
             filtered_measurements = []
             for item in data_store["manual_measurements"]:
                 try:
                     # 获取时间戳
-                    ts_str = item.get("received_at") or item.get("timestamp") or datetime.now().isoformat()
+                    ts_str = item.get("received_at") or item.get("timestamp") or get_local_time().isoformat()
                     # 解析时间戳（处理不同的格式）
                     if isinstance(ts_str, str):
                         # 尝试解析 ISO 格式
@@ -611,9 +619,9 @@ def upload_qring_data():
                             try:
                                 ts = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
                             except:
-                                ts = datetime.now()
+                                ts = get_local_time()
                     else:
-                        ts = datetime.now()
+                        ts = get_local_time()
                     
                     if ts > cutoff:
                         filtered_measurements.append(item)
@@ -623,11 +631,11 @@ def upload_qring_data():
                     filtered_measurements.append(item)
             
             data_store["manual_measurements"] = filtered_measurements
-            data_store["last_update"]["manual_measurements"] = datetime.now().isoformat()
+            data_store["last_update"]["manual_measurements"] = get_local_time().isoformat()
             print(f"\n{'='*60}")
             print(f"📥 收到主动测量数据上传请求")
             print(f"   原始数据条数: {len(qring_data)}")
-            print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
             print(f"   更新前总数: {len(data_store['manual_measurements']) - len(qring_data)} 条")
             print(f"   更新后总数: {len(data_store['manual_measurements'])} 条")
             print(f"{'='*60}\n")
@@ -637,10 +645,10 @@ def upload_qring_data():
             # 直接追加，基于唯一标识去重
             if data_type == "exercise":
                 # 运动记录：基于 startTime 去重
-                cutoff = datetime.now() - timedelta(days=7)
+                cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("startTime", datetime.now().isoformat())) > cutoff
+                    if datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) > cutoff
                 ]
                 unique_data = {item.get("startTime", ""): item for item in existing_data}
                 for item in qring_data:
@@ -650,10 +658,10 @@ def upload_qring_data():
                 data_store[data_type] = list(unique_data.values())
             elif data_type == "sport_plus":
                 # 运动+：基于 startTime 去重
-                cutoff = datetime.now() - timedelta(days=7)
+                cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("startTime", datetime.now().isoformat())) > cutoff
+                    if datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) > cutoff
                 ]
                 unique_data = {item.get("startTime", ""): item for item in existing_data}
                 for item in qring_data:
@@ -663,10 +671,10 @@ def upload_qring_data():
                 data_store[data_type] = list(unique_data.values())
             elif data_type == "sedentary":
                 # 久坐提醒：基于 (date, endTime) 去重
-                cutoff = datetime.now() - timedelta(days=7)
+                cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) > cutoff
+                    if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) > cutoff
                 ]
                 unique_data = {}
                 for item in existing_data:
@@ -678,11 +686,11 @@ def upload_qring_data():
                         unique_data[key] = item
                 data_store[data_type] = list(unique_data.values())
             
-            data_store["last_update"][data_type] = datetime.now().isoformat()
+            data_store["last_update"][data_type] = get_local_time().isoformat()
             print(f"\n{'='*60}")
             print(f"📥 收到 {data_type} 数据上传请求")
             print(f"   原始数据条数: {len(qring_data)}")
-            print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
             print(f"   新增: {len(qring_data)} 条")
             print(f"   去重后总数: {len(data_store[data_type])} 条")
             if data_type == "exercise" and data_store[data_type]:
@@ -694,7 +702,7 @@ def upload_qring_data():
             # 用户信息和目标设置：只保留最新一条
             if qring_data and len(qring_data) > 0:
                 data_store[data_type] = [qring_data[0]]  # 只保留最新一条
-                data_store["last_update"][data_type] = datetime.now().isoformat()
+                data_store["last_update"][data_type] = get_local_time().isoformat()
                 print(f"{data_type} 数据已更新")
         
         elif data_type in ["blood_pressure", "blood_oxygen", "temperature", "stress", "hrv"]:
@@ -702,10 +710,10 @@ def upload_qring_data():
             # 对于 stress 和 hrv，基于唯一ID去重（避免同一天不同时间点的数据被去重）
             if data_type in ["stress", "hrv"]:
                 # 保留最近的数据（例如最近7天）
-                cutoff = datetime.now() - timedelta(days=7)
+                cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) > cutoff
+                    if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) > cutoff
                 ]
                 
                 # 使用字典去重（key: (date, id) 或 (date, stressId/hrvId)）
@@ -721,7 +729,7 @@ def upload_qring_data():
                     unique_data[key] = item
                 
                 # 过滤未来时间数据
-                now = datetime.now()
+                now = get_local_time()
                 filtered_data = []
                 future_filtered = 0
                 for item in qring_data:
@@ -798,7 +806,7 @@ def upload_qring_data():
                 print(f"\n{'='*60}")
                 print(f"📥 收到 {data_type} 数据上传请求")
                 print(f"   原始数据条数: {new_count}")
-                print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
                 print(f"   现有数据(最近7天): {existing_count} 条")
                 print(f"   新增: {new_count} 条")
                 print(f"   去重后总数: {len(data_store[data_type])} 条")
@@ -826,10 +834,10 @@ def upload_qring_data():
                 print(f"{'='*60}\n")
             elif data_type == "temperature":
                 # 体温数据去重：基于 (date, temperature) 去重
-                cutoff = datetime.now() - timedelta(days=7)
+                cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) > cutoff
+                    if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) > cutoff
                 ]
                 
                 unique_data = {}
@@ -838,7 +846,7 @@ def upload_qring_data():
                     unique_data[key] = item
                 
                 # 过滤未来时间数据
-                now = datetime.now()
+                now = get_local_time()
                 filtered_data = []
                 future_filtered = 0
                 for item in qring_data:
@@ -889,7 +897,7 @@ def upload_qring_data():
                 print(f"\n{'='*60}")
                 print(f"📥 收到 {data_type} 数据上传请求")
                 print(f"   原始数据条数: {len(qring_data)}")
-                print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
                 print(f"   现有数据(最近7天): {existing_count} 条")
                 print(f"   新增: {new_count} 条, 更新(0→非0): {updated_count} 条, 重复: {duplicate_count} 条")
                 print(f"   去重后总数: {len(data_store[data_type])} 条")
@@ -899,10 +907,10 @@ def upload_qring_data():
                 print(f"{'='*60}\n")
             elif data_type == "blood_oxygen":
                 # 血氧数据去重：基于 (date, soa2) 去重，如果同一时间点有多个值，保留最新的
-                cutoff = datetime.now() - timedelta(days=7)
+                cutoff = get_local_time() - timedelta(days=7)
                 existing_data = [
                     item for item in data_store.get(data_type, [])
-                    if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) > cutoff
+                    if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) > cutoff
                 ]
                 
                 # 使用字典去重，key为date，保留最新的数据
@@ -921,7 +929,7 @@ def upload_qring_data():
                                 unique_data[date_key] = item
                 
                 # 过滤未来时间数据
-                now = datetime.now()
+                now = get_local_time()
                 filtered_data = []
                 future_filtered = 0
                 for item in qring_data:
@@ -988,11 +996,11 @@ def upload_qring_data():
                 
                 existing_count = len(existing_data)
                 data_store[data_type] = list(unique_data.values())
-                data_store["last_update"][data_type] = datetime.now().isoformat()
+                data_store["last_update"][data_type] = get_local_time().isoformat()
                 print(f"\n{'='*60}")
                 print(f"📥 收到 {data_type} 数据上传请求")
                 print(f"   原始数据条数: {len(qring_data)}")
-                print(f"   接收时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"   接收时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
                 print(f"   现有数据(最近7天): {existing_count} 条")
                 print(f"   新增: {new_count} 条, 更新(0→非0): {updated_count} 条, 重复: {duplicate_count} 条")
                 print(f"   去重后总数: {len(data_store[data_type])} 条")
@@ -1011,7 +1019,7 @@ def upload_qring_data():
                 # 其他类型直接追加（暂时不去重）
                 data_store[data_type].extend(qring_data)
             
-            data_store["last_update"][data_type] = datetime.now().isoformat()
+            data_store["last_update"][data_type] = get_local_time().isoformat()
         
         # 保存到文件
         save_data()
@@ -1019,7 +1027,7 @@ def upload_qring_data():
         return jsonify({
             "success": True,
             "message": f"Received {len(qring_data)} {data_type} records",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": get_local_time().isoformat()
         })
         
     except Exception as e:
@@ -1054,7 +1062,7 @@ def health():
     """健康检查"""
     return jsonify({
         "status": "ok",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": get_local_time().isoformat(),
         "version": "1.0.0",
         "data_file": DATA_FILE,
         "data_file_exists": os.path.exists(DATA_FILE)
@@ -1091,13 +1099,13 @@ def get_heartrate():
     # 默认包含所有数据（包括0值），确保横坐标连续无断档
     include_zero = request.args.get('include_zero', 'true').lower() == 'true'  # 默认包含心率=0的数据
     
-    cutoff_time = datetime.now() - timedelta(hours=hours)
-    now = datetime.now()
+    cutoff_time = get_local_time() - timedelta(hours=hours)
+    now = get_local_time()
     
     print(f"\n📤 {source} 请求: /api/heartrate")
     print(f"   客户端IP: {client_ip}")
     print(f"   请求参数: hours={hours}, include_zero={include_zero}")
-    print(f"   当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
     print(f"   数据总数: {len(data_store['heartrate'])} 条")
     
     filtered_data = [
@@ -1133,7 +1141,7 @@ def get_heartrate():
         "data": filtered_data,
         "count": len(filtered_data),
         "valid_count": valid_count,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1158,7 +1166,7 @@ def get_daily_activity():
     print(f"\n📤 {source} 请求: /api/daily-activity")
     print(f"   客户端IP: {client_ip}")
     print(f"   请求参数: days={days}")
-    print(f"   当前时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   当前时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
     print(f"   数据总数: {len(data_store['activity'])} 条")
     print(f"   返回数据: {len(filtered_data)} 条")
     if filtered_data:
@@ -1174,7 +1182,7 @@ def get_daily_activity():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1187,7 +1195,7 @@ def get_daily_readiness():
         "success": True,
         "data": [],
         "count": 0,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": get_local_time().isoformat(),
         "note": "Qring does not provide readiness data directly"
     })
 
@@ -1210,7 +1218,7 @@ def get_sleep():
     print(f"\n📤 {source} 请求: /api/sleep")
     print(f"   客户端IP: {client_ip}")
     print(f"   请求参数: days={days}")
-    print(f"   当前时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   当前时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
     print(f"   数据总数: {len(data_store['sleep'])} 条")
     print(f"   返回数据: {len(filtered_data)} 条")
     if filtered_data:
@@ -1231,7 +1239,7 @@ def get_sleep():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1259,7 +1267,7 @@ def get_stats():
     
     print(f"\n📊 {source} 请求: /api/stats")
     print(f"   客户端IP: {client_ip}")
-    print(f"   请求时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   请求时间: {get_local_time().strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
     print(f"   心率数据: {stats['heartrate_count']} 条")
     print(f"   活动数据: {stats['activity_count']} 条")
     print(f"   睡眠数据: {stats['sleep_count']} 条")
@@ -1286,8 +1294,8 @@ def get_hrv():
     source, client_ip = get_client_source()
     
     hours = request.args.get('hours', 168, type=int)  # 默认7天
-    cutoff_time = datetime.now() - timedelta(hours=hours)
-    now = datetime.now()
+    cutoff_time = get_local_time() - timedelta(hours=hours)
+    now = get_local_time()
     
     print(f"\n📤 {source} 请求: /api/hrv")
     print(f"   客户端IP: {client_ip}")
@@ -1297,8 +1305,8 @@ def get_hrv():
     
     filtered_data = [
         item for item in data_store.get("hrv", [])
-        if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("date", datetime.now().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        and datetime.fromisoformat(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1321,7 +1329,7 @@ def get_hrv():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1332,8 +1340,8 @@ def get_stress():
     source, client_ip = get_client_source()
     
     hours = request.args.get('hours', 168, type=int)  # 默认7天
-    cutoff_time = datetime.now() - timedelta(hours=hours)
-    now = datetime.now()
+    cutoff_time = get_local_time() - timedelta(hours=hours)
+    now = get_local_time()
     
     print(f"\n📤 {source} 请求: /api/stress")
     print(f"   客户端IP: {client_ip}")
@@ -1343,8 +1351,8 @@ def get_stress():
     
     filtered_data = [
         item for item in data_store.get("stress", [])
-        if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("date", datetime.now().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        and datetime.fromisoformat(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1367,7 +1375,7 @@ def get_stress():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1378,8 +1386,8 @@ def get_blood_oxygen():
     source, client_ip = get_client_source()
     
     hours = request.args.get('hours', 168, type=int)  # 默认7天
-    cutoff_time = datetime.now() - timedelta(hours=hours)
-    now = datetime.now()
+    cutoff_time = get_local_time() - timedelta(hours=hours)
+    now = get_local_time()
     
     print(f"\n📤 {source} 请求: /api/blood-oxygen")
     print(f"   客户端IP: {client_ip}")
@@ -1389,8 +1397,8 @@ def get_blood_oxygen():
     
     filtered_data = [
         item for item in data_store.get("blood_oxygen", [])
-        if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("date", datetime.now().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        and datetime.fromisoformat(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1413,7 +1421,7 @@ def get_blood_oxygen():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1424,14 +1432,14 @@ def get_temperature():
     source, client_ip = get_client_source()
     
     hours = request.args.get('hours', 168, type=int)  # 默认7天
-    cutoff_time = datetime.now() - timedelta(hours=hours)
+    cutoff_time = get_local_time() - timedelta(hours=hours)
     
     print(f"\n📤 {source} 请求: /api/temperature")
     print(f"   客户端IP: {client_ip}")
     
     filtered_data = [
         item for item in data_store.get("temperature", [])
-        if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) >= cutoff_time
+        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
     ]
     
     filtered_data.sort(key=lambda x: x.get("date", ""))
@@ -1441,7 +1449,7 @@ def get_temperature():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1452,8 +1460,8 @@ def get_exercise():
     source, client_ip = get_client_source()
     
     hours = request.args.get('hours', 168, type=int)  # 默认7天
-    cutoff_time = datetime.now() - timedelta(hours=hours)
-    now = datetime.now()
+    cutoff_time = get_local_time() - timedelta(hours=hours)
+    now = get_local_time()
     
     print(f"\n📤 {source} 请求: /api/exercise")
     print(f"   客户端IP: {client_ip}")
@@ -1463,8 +1471,8 @@ def get_exercise():
     
     filtered_data = [
         item for item in data_store.get("exercise", [])
-        if datetime.fromisoformat(item.get("startTime", datetime.now().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("startTime", datetime.now().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) >= cutoff_time
+        and datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1482,7 +1490,7 @@ def get_exercise():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1493,8 +1501,8 @@ def get_sport_plus():
     source, client_ip = get_client_source()
     
     hours = request.args.get('hours', 168, type=int)  # 默认7天
-    cutoff_time = datetime.now() - timedelta(hours=hours)
-    now = datetime.now()
+    cutoff_time = get_local_time() - timedelta(hours=hours)
+    now = get_local_time()
     
     print(f"\n📤 {source} 请求: /api/sport-plus")
     print(f"   客户端IP: {client_ip}")
@@ -1504,8 +1512,8 @@ def get_sport_plus():
     
     filtered_data = [
         item for item in data_store.get("sport_plus", [])
-        if datetime.fromisoformat(item.get("startTime", datetime.now().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("startTime", datetime.now().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) >= cutoff_time
+        and datetime.fromisoformat(item.get("startTime", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1526,7 +1534,7 @@ def get_sport_plus():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1537,19 +1545,19 @@ def get_sedentary():
     source, client_ip = get_client_source()
     
     hours = request.args.get('hours', 168, type=int)  # 默认7天
-    cutoff_time = datetime.now() - timedelta(hours=hours)
-    now = datetime.now()
+    cutoff_time = get_local_time() - timedelta(hours=hours)
+    now = get_local_time()
     
     print(f"\n📤 {source} 请求: /api/sedentary")
     print(f"   客户端IP: {client_ip}")
     print(f"   请求参数: hours={hours}")
-    print(f"   当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')} (新加坡时间)")
     print(f"   数据总数: {len(data_store.get('sedentary', []))} 条")
     
     filtered_data = [
         item for item in data_store.get("sedentary", [])
-        if datetime.fromisoformat(item.get("date", datetime.now().isoformat())) >= cutoff_time
-        and datetime.fromisoformat(item.get("date", datetime.now().isoformat())) <= now  # 过滤掉未来时间戳的数据
+        if datetime.fromisoformat(item.get("date", get_local_time().isoformat())) >= cutoff_time
+        and datetime.fromisoformat(item.get("date", get_local_time().isoformat())) <= now  # 过滤掉未来时间戳的数据
     ]
     
     print(f"   时间过滤后: {len(filtered_data)} 条 (cutoff: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')})")
@@ -1565,7 +1573,7 @@ def get_sedentary():
         "success": True,
         "data": filtered_data,
         "count": len(filtered_data),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1584,7 +1592,7 @@ def get_user_info():
     return jsonify({
         "success": True,
         "data": latest_info,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1603,7 +1611,7 @@ def get_target_info():
     return jsonify({
         "success": True,
         "data": latest_info,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
@@ -1620,11 +1628,11 @@ def get_manual_measurements():
     print(f"   客户端IP: {client_ip}")
     print(f"   请求参数: hours={hours}, type={measurement_type}")
     
-    cutoff_time = datetime.now() - timedelta(hours=hours)
+    cutoff_time = get_local_time() - timedelta(hours=hours)
     
     filtered_data = [
         item for item in data_store.get("manual_measurements", [])
-        if datetime.fromisoformat(item.get("received_at", item.get("timestamp", datetime.now().isoformat()))) >= cutoff_time
+        if datetime.fromisoformat(item.get("received_at", item.get("timestamp", get_local_time().isoformat()))) >= cutoff_time
     ]
     
     # 如果指定了测量类型，进行过滤
@@ -1651,7 +1659,7 @@ def get_manual_measurements():
         "manual_count": manual_count,
         "realtime_count": realtime_count,
         "one_key_count": one_key_count,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_local_time().isoformat()
     })
 
 
