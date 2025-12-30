@@ -214,7 +214,6 @@ def convert_qring_heartrate_to_api(qring_data):
                 "timestamp": timestamp,
                 "hrId": item.get("hrId", 0),
                 "bpm": int(heartrate_value) if heartrate_value else 0,
-                "hrId": item.get("hrId", 0)
             })
     
     if future_count > 0:
